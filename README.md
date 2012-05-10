@@ -5,12 +5,19 @@ File::Set::Writer - Buffered writes with a file handle pool
 # DESCRIPTION
 
 File::Set::Writer gives you the ability to write to many different 
-file handles  without worrying about breaking file handle limits.  
+file handles without worrying about breaking file handle limits.  
 Additionally it can buffer writes so that a file is only written when
 you have submitted N lines to write to the given file.  You can
 place limits on the number of file handles, number of lines per
-file, and number of files that can be buffered at once.  Write ALL
-the files without worrying.
+file, and number of files that can be buffered at once.  
+
+The real-world use-case for this module is a situation where you have
+one large file that must be split into thousands or hundreds of thousands
+of files based on arbitrary conditions and want to avoid an Out Of Memory!
+error while reducing the number of `open`, `close` and `write` syscalls 
+being made.
+
+Write ALL the files.
 
 # SYNOPSIS
 
@@ -32,14 +39,15 @@ The constructor accepts the following parameters, and
 each of the following may be called as a method on the
 object after instantiation:
 
-- max\_handles
+- max\_handles (Required)
 
     $writer->max_handles( 512 );
 
-How many files may be open at one time.  By default this
-will use the number yielded from ulimit -n, subtracting
-double the amount of file handles currently-used by your
-process, plus 10.  You really should set this yourself.
+How many files may be open at one time.  You MUST set this.
+
+If you do not know how many open handles you might want you
+should check `ulimit -n` on your system and cut this number
+in half.
 
 When this number is meet or exceeded, the amount of file
 handles given by expire\_handles\_batch\_size will be closed
@@ -102,19 +110,24 @@ and business logic!)
 
     $writer->print( "filename", @lines )
 
+This is the only method that you would normally want to use.
+
 Write lines to the given filename.  This will stage the data 
-for the file in memory.  When max\_lines has been reached
-or exceeded for the given file, the file will be written 
-to disk.  The file may be written before max\_lines if
-max\_files has been exceeded and the file is selected as
-one to write.
+for the file in memory.  
+
+Data will be written to disk in the following situations:
+
+- max\_lines has been met for a given file.  The file will be written.
+- max\_files has been met.  The most-used files will be written.
+- $writer goes out of scope.  Everything will be written.
 
 ## sync
 
     $writer->sync;
 
-Write all staged data to disk.  This happens automatically
-at the objects destruction.
+Write all staged data to disk and closes all currently-open
+file handles.  This happens automatically at the objects 
+destruction.
 
 ## handles
 
