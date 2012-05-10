@@ -43,6 +43,8 @@ object after instantiation:
 
 =item max_handles
 
+    $writer->max_handles( 512 );
+
 How many files may be open at one time.  By default this
 will use the number yielded from ulimit -n, subtracting
 double the amount of file handles currently-used by your
@@ -55,10 +57,14 @@ file handles.
 
 =item max_lines
 
+    $writer->max_lines( 500 );
+
 How many lines may be queued per-file before the lines
 are written to disk.  This defaults to 500.
 
 =item max_files
+
+    $writer->max_files( 100 )
 
 How many files may be written to before some files are
 automatically written to disk.  
@@ -68,22 +74,36 @@ given by expire_files_batch_size will be written to disk
 in order of which have the highest count of lines currently
 buffered.
 
+This defaults to 100.
+
 =item expire_handles_batch_size
+
+    $writer->expire_handles_batch_size( int($writer->max_handles * .2) );
 
 The count of file handles to purge from the cache when 
 max_handles has been reached or exceeded.
 
+This defaults to 20% of max_handles.  If you manually
+set it at any point the default will not be used.
+
 =item expire_files_batch_size
+
+    $writer->expire_files_batch_size( int($writer->max_files * .2) );
 
 The count of files to be written to disk when max_files
 has been reached or exceeded.
 
+This defaults to 20% of max_files.  If you manually
+set it at any point the default will not be used.
+
 =item line_join
 
 When writing to the disk, join the lines with the character
-given here.  By default a UNIX newline is used.  Set to "" 
-to disable new-lines in the join (but you should totally
-have a seperation of display and logic!)
+given here.
+
+By default a UNIX newline is used.  Set to "" to disable new-lines 
+in the join (but you should totally have a seperation of display logic 
+and business logic!)
 
 =back
 
@@ -102,7 +122,7 @@ one to write.
 
 =head2 sync
 
-    $writer->sync
+    $writer->sync;
 
 Write all staged data to disk.  This happens automatically
 at the objects destruction.
@@ -145,4 +165,3 @@ same terms as perl itself.
 
 The most current version of File::Set::Writer can be found 
 at L<https://github.com/symkat/File-Set-Writer>
-

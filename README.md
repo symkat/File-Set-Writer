@@ -34,6 +34,8 @@ object after instantiation:
 
 - max\_handles
 
+    $writer->max_handles( 512 );
+
 How many files may be open at one time.  By default this
 will use the number yielded from ulimit -n, subtracting
 double the amount of file handles currently-used by your
@@ -46,10 +48,14 @@ file handles.
 
 - max\_lines
 
+    $writer->max_lines( 500 );
+
 How many lines may be queued per-file before the lines
 are written to disk.  This defaults to 500.
 
 - max\_files
+
+    $writer->max_files( 100 )
 
 How many files may be written to before some files are
 automatically written to disk.  
@@ -59,22 +65,36 @@ given by expire\_files\_batch\_size will be written to disk
 in order of which have the highest count of lines currently
 buffered.
 
+This defaults to 100.
+
 - expire\_handles\_batch\_size
+
+    $writer->expire_handles_batch_size( int($writer->max_handles * .2) );
 
 The count of file handles to purge from the cache when 
 max\_handles has been reached or exceeded.
 
+This defaults to 20% of max\_handles.  If you manually
+set it at any point the default will not be used.
+
 - expire\_files\_batch\_size
+
+    $writer->expire_files_batch_size( int($writer->max_files * .2) );
 
 The count of files to be written to disk when max\_files
 has been reached or exceeded.
 
+This defaults to 20% of max\_files.  If you manually
+set it at any point the default will not be used.
+
 - line\_join
 
 When writing to the disk, join the lines with the character
-given here.  By default a UNIX newline is used.  Set to "" 
-to disable new-lines in the join (but you should totally
-have a seperation of display and logic!)
+given here.
+
+By default a UNIX newline is used.  Set to "" to disable new-lines 
+in the join (but you should totally have a seperation of display logic 
+and business logic!)
 
 # METHODS
 
@@ -91,7 +111,7 @@ one to write.
 
 ## sync
 
-    $writer->sync
+    $writer->sync;
 
 Write all staged data to disk.  This happens automatically
 at the objects destruction.
