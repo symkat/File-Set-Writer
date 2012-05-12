@@ -4,7 +4,7 @@ use strict;
 use File::Set::Writer;
 use Test::More;
 
-my $writer = File::Set::Writer->new(
+ok my $writer = File::Set::Writer->new(
     max_handles => 100,
 );
 
@@ -42,6 +42,38 @@ is( $writer->max_files, 100, "Max files new setting." );
 is( $writer->max_lines, 100, "Max lines new setting." );
 is( $writer->expire_handles_batch_size, 500, "Expire handle respects user" );
 is( $writer->expire_files_batch_size, 500, "Expire files respects user" );
+
+# Settings given to object.
+ok $writer = File::Set::Writer->new(
+    max_handles => 500,
+    max_files   => 600,
+    max_lines   => 700,
+    line_join   => "foo",
+), "Can create new object.";
+
+is( $writer->max_handles, 500, "Set max_handles on object creation." );
+is( $writer->max_files, 600, "Set max_files on object creation." );
+is( $writer->max_lines, 700, "Set max_lines on object creation." );
+is( $writer->expire_handles_batch_size, 100, "expire_handles set automatically." );
+is( $writer->expire_files_batch_size, 120, "expire_files set automatically." );
+is( $writer->line_join, "foo", "Set line_join on object creation." );
+
+# Same, with manual expires_
+ok $writer = File::Set::Writer->new(
+    max_handles                 => 500,
+    max_files                   => 600,
+    max_lines                   => 700,
+    line_join                   => "foo",
+    expire_handles_batch_size   => 50,
+    expire_files_batch_size     => 75,
+), "Can create new object.";
+
+is( $writer->max_handles, 500, "Set max_handles on object creation." );
+is( $writer->max_files, 600, "Set max_files on object creation." );
+is( $writer->max_lines, 700, "Set max_lines on object creation." );
+is( $writer->expire_handles_batch_size, 50, "expire_handles set on creation." );
+is( $writer->expire_files_batch_size, 75, "expire_files set on creation." );
+is( $writer->line_join, "foo", "Set line_join on object creation." );
 
 
 done_testing();
