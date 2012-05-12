@@ -80,28 +80,83 @@ sub expire_handles_batch_size {
 }
 
 sub print {
+    my ( $self, $file, @lines ) = @_;
+    
+    push @{$self->{queue}->{$file}}, @lines;
 
+    $self->_write_file( $file )
+        if @{$self->{queue}->{$file}} > $self->max_lines;
+    
+    return $self;
 }
 
+sub _write_file {
+    my ( $self, $file ) = @_;
+
+    $self->_write( 
+        $file, 
+        join( $self->line_join, @{$self->{queue}->{$file}} ) . $self->line_join
+    );
+    $self->{queue}->{$file} = [];
+}
+
+sub _write {
+    my ( $self, $file, @contents ) = @_;
+
+    if ( ! exists $self->{fcache}->{$file} ) {
+        if ( keys %{$self->{fcache}} >= $self->max_handles ) {
+
+            my @files = sort { 
+                $self->{fcache}->{$a}->{stamp} <=> $self->{fcache}->{$b}->{stamp}
+            } keys %{$self->{fcache}};
+            
+            my $fh_to_close = $self->expire_handles_batch_size;
+            foreach my $target ( delete @{$self->{fcache}}{@files[0..$fh_to_close]} ) {
+                close $target->{fh}
+                    or die "Failed to close handle to " . $target->{name} . ": $!";
+            }
+        }
+
+        open my $new_fh, ">>", $file
+            or die "Failed to open $file for writing: $!";
+        $self->{fcache}->{$file} = {
+            fh          => $new_fh,
+            name        => $file,
+            stamp       => time(),
+        };
+    }
+
+    my $wfh = $self->{fcache}->{$file}->{fh};
+    my $content = join ("", @contents);
+    print $wfh $content
+        or die "Failed to write $file: $!";
+    $self->{fcache}->{$file}->{stamp} = time;
+}
 
 # Write all staged data to disk and closes all currently-open
 # file handles.  This happens automatically at the objects 
 # destruction.
 
 sub _sync {
+    my ( $self ) = @_;
+    
+    foreach my $file ( keys %{$self->{queue}} ) {
+        $self->_write_file( $file );
+    }
 
+    return $self;
 }
 
 # Return the count of open file handles currently in the cache.
 
 sub _handles {
-
+    return scalar keys %{ shift->{fcache} };
 }
 
 # Return the count of files currently staged for being written.
 
 sub _files {
-
+    return scalar keys %{ shift->{queue} };
 }
 
 # $self->_lines( "filename" );
@@ -109,8 +164,12 @@ sub _files {
 # Return the count of lines staged for the given filename.
 
 sub _lines {
-
+    return scalar @{ shift->{queue}->{ shift() } };
 }
+
+# Push our buffered arrays into the file handles before
+# we close the file handles.
+sub DESTROY { shift->_sync; }
 
 1;
 
