@@ -85,38 +85,60 @@ sub print {
     push @{$self->{queue}->{$file}}, @lines;
 
     $self->_write_file( $file )
-        if @{$self->{queue}->{$file}} > $self->max_lines;
+        if @{$self->{queue}->{$file}} >= $self->max_lines;
+
+    $self->_write_pending_files 
+        if $self->_files >= $self->max_files;
     
     return $self;
+}
+
+sub _write_pending_files {
+    my ( $self ) = @_;
+            
+    my @files = sort { 
+        scalar @{$self->{queue}->{$a} || []} <=> scalar @{$self->{queue}->{$b} || []}
+    } keys %{$self->{queue}};
+
+    foreach my $i ( 0 .. $self->expire_files_batch_size ) {
+        $self->_write_file( $files[$i] ) if $files[$i];
+    }
+}
+
+sub _close_pending_filehandles {
+    my ( $self )  = @_;
+
+    my @files = sort { 
+        $self->{fcache}->{$a}->{stamp} <=> $self->{fcache}->{$b}->{stamp}
+    } keys %{$self->{fcache}};
+    
+    foreach my $i ( 0 .. $self->expire_handles_batch_size ) {
+        last unless $files[$i];
+        delete $self->{fcache}->{$files[$i]};
+    }
 }
 
 sub _write_file {
     my ( $self, $file ) = @_;
 
+    die "Error _write_file called with invalid argument \"$file\""
+        unless defined $file and exists $self->{queue}->{$file};
+
     $self->_write( 
         $file, 
         join( $self->line_join, @{$self->{queue}->{$file}} ) . $self->line_join
     );
-    $self->{queue}->{$file} = [];
+    delete $self->{queue}->{$file};
 }
 
 sub _write {
     my ( $self, $file, @contents ) = @_;
+        
+    if ( $self->_handles >= $self->max_handles ) {
+        $self->_close_pending_filehandles();
+    }
 
     if ( ! exists $self->{fcache}->{$file} ) {
-        if ( keys %{$self->{fcache}} >= $self->max_handles ) {
-
-            my @files = sort { 
-                $self->{fcache}->{$a}->{stamp} <=> $self->{fcache}->{$b}->{stamp}
-            } keys %{$self->{fcache}};
-            
-            my $fh_to_close = $self->expire_handles_batch_size;
-            foreach my $target ( delete @{$self->{fcache}}{@files[0..$fh_to_close]} ) {
-                close $target->{fh}
-                    or die "Failed to close handle to " . $target->{name} . ": $!";
-            }
-        }
-
         open my $new_fh, ">>", $file
             or die "Failed to open $file for writing: $!";
         $self->{fcache}->{$file} = {
@@ -150,13 +172,13 @@ sub _sync {
 # Return the count of open file handles currently in the cache.
 
 sub _handles {
-    return scalar keys %{ shift->{fcache} };
+    return scalar keys %{ shift->{fcache} || {} };
 }
 
 # Return the count of files currently staged for being written.
 
 sub _files {
-    return scalar keys %{ shift->{queue} };
+    return scalar keys %{ shift->{queue} || {} };
 }
 
 # $self->_lines( "filename" );
@@ -164,7 +186,7 @@ sub _files {
 # Return the count of lines staged for the given filename.
 
 sub _lines {
-    return scalar @{ shift->{queue}->{ shift() } };
+    return scalar @{ shift->{queue}->{ shift() } || [] };
 }
 
 # Push our buffered arrays into the file handles before
