@@ -1,47 +1,20 @@
 package File::Set::Writer;
-use warnings;
-use strict;
-use Scalar::Util qw( looks_like_number );
 
-my @attrs = qw( max_handles max_lines max_files line_join );
-my @extra_attrs = qw( expire_files_batch_size expire_handles_batch_size );
+use Moo;
+use MooX::Types::MooseLike::Base qw( Str );
+use MooX::Types::MooseLike::Numeric qw( PositiveInt );
 
-sub new {
-    my ( $class, @args ) = @_;
-    my %args = @args == 1 ? %{ $args[0] } : @args;
-    my $self = bless {
-        max_lines       => 500,
-        max_files       => 100,
-        line_join       => "\n",
-    }, $class;
+has max_lines => ( is => 'rw', default => sub { 500 }, isa => PositiveInt );
 
-    foreach my $method ( @attrs, @extra_attrs ) {
-        $self->$method( delete $args{$method} )
-            if exists $args{$method};
-    }
+has max_files => ( is => 'rw', default => sub { 100 }, isa => PositiveInt );
 
-    die "Error: Unknown class arguments: " . join(", ", keys %args) . "."
-        if ( keys %args );
+has max_handles => ( is => 'rw', required => 1, isa => PositiveInt );
 
-    die "Error: max_handles is a required class argument"
-        unless looks_like_number $self->max_handles;
+has line_join => ( is => 'rw', default => sub { "\n" }, isa => Str );
 
-    return $self;
-}
+has expire_files_batch_size => ( is => 'rw', isa => PositiveInt );
 
-# Create accessors
-foreach my $attr ( @attrs ) {
-    no strict 'refs';
-    *$attr = sub {
-        my $self = shift;
-        $self->{$attr} = shift if @_;
-
-        die "Error: $attr MUST be a number"
-            unless looks_like_number($self->{$attr}) or $attr eq 'line_join';
-
-        return $self->{$attr};
-    };
-}
+has expire_handles_batch_size => ( is => 'rw', isa => PositiveInt );
 
 # If the user doesn't set a batch_size for files or handles
 # we will use 20% of max_(files|handles).  This will be updated
@@ -49,35 +22,13 @@ foreach my $attr ( @attrs ) {
 # sets the batch_size, at which point it becomes their responsiblity
 # to manage the values.
 
-sub expire_files_batch_size {
-    my ( $self, $value ) = @_;
+around expire_files_batch_size => sub {
+    $_[0]->(@_[1..$#_]) || int $_[1]->max_files/5
+};
 
-    return $self->{expire_files_batch_size}
-        if exists $self->{expire_files_batch_size};
-
-    return int( $self->max_files / 5 )
-        unless $value;
-    
-    die "Error: expire_files_batch_size MUST be a number"
-        unless looks_like_number $value;
-
-    return $self->{expire_files_batch_size} = $value;
-}
-
-sub expire_handles_batch_size {
-    my ( $self, $value ) = @_;
-
-    return $self->{expire_handles_batch_size}
-        if exists $self->{expire_handles_batch_size};
-
-    return int( $self->max_handles / 5 )
-        unless $value;
-
-    die "Error: expire_handles_batch_size MUST be a number"
-        unless looks_like_number $value;
-
-    return $self->{expire_handles_batch_size} = $value;
-}
+around expire_handles_batch_size => sub {
+    $_[0]->(@_[1..$#_]) || int $_[1]->max_handles/5
+};
 
 sub print {
     my ( $self, $file, @lines ) = @_;
