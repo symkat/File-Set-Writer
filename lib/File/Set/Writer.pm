@@ -1,6 +1,93 @@
 package File::Set::Writer;
 use warnings;
 use strict;
+use Scalar::Util qw( looks_like_number );
+use Moo;
+
+sub BUILD {
+    my ( $self ) = @_;
+    die "max_handles requires a positive number." 
+        unless $self->max_handles and $self->max_handles > 0;
+}
+
+foreach my $attr  ( qw( max_handles max_lines max_files ) ) {
+    has $attr => (
+        is => 'rw',
+        default => sub { {max_lines => 500, max_files => 100}->{$attr} || 0 },
+        isa => sub { 
+            die "$_[0] is not a number!" unless looks_like_number $_[0]
+        },
+    );
+}
+
+has 'line_join' => (
+    is => 'rw',
+    default => sub { "\n" },
+);
+
+# Well, this is complicated in the Moo way, let's use Perl.
+sub expire_files_batch_size {
+    my ( $self, $value ) = @_;
+
+    if ( exists $self->{expire_files_batch_size} ) {
+        return $self->{expire_files_batch_size};
+    }
+
+    if ( ! $value ) {
+        return int( $self->max_files / 5 );
+    }
+
+    return $self->{expire_files_batch_size} = $value;
+}
+
+sub expire_handles_batch_size {
+    my ( $self, $value ) = @_;
+
+    if ( exists $self->{expire_handles_batch_size} ) {
+        return $self->{expire_handles_batch_size};
+    }
+
+    if ( ! $value ) {
+        return int( $self->max_handles / 5 );
+    }
+
+    return $self->{expire_handles_batch_size} = $value;
+}
+
+sub print {
+
+}
+
+
+# Write all staged data to disk and closes all currently-open
+# file handles.  This happens automatically at the objects 
+# destruction.
+
+sub _sync {
+
+}
+
+# Return the count of open file handles currently in the cache.
+
+sub _handles {
+
+}
+
+# Return the count of files currently staged for being written.
+
+sub _files {
+
+}
+
+# $self->_lines( "filename" );
+#
+# Return the count of lines staged for the given filename.
+
+sub _lines {
+
+}
+
+1;
 
 
 __END__
@@ -137,32 +224,6 @@ Data will be written to disk in the following situations:
 =item * $writer goes out of scope.  Everything will be written.
 
 =back
-
-=head2 sync
-
-    $writer->sync;
-
-Write all staged data to disk and closes all currently-open
-file handles.  This happens automatically at the objects 
-destruction.
-
-=head2 handles
-
-    $writer->handles;
-
-Return the count of open file handles currently in the cache.
-
-=head2 files
-
-    $writer->files;
-
-Return the count of files currently staged for being written.
-
-=head2 lines 
-
-    $writer->lines( "filename" );
-
-Return the count of lines staged for the given filename.
 
 =head1 AUTHOR
 

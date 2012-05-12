@@ -4,9 +4,9 @@ use strict;
 use File::Set::Writer;
 use Test::More;
 
-my $writer = File::Set::Writer->new({
+my $writer = File::Set::Writer->new(
     max_handles => 100,
-});
+);
 
 
 # Standard Defaults have been set.

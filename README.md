@@ -121,32 +121,6 @@ Data will be written to disk in the following situations:
 - max\_files has been met.  The most-used files will be written.
 - $writer goes out of scope.  Everything will be written.
 
-## sync
-
-    $writer->sync;
-
-Write all staged data to disk and closes all currently-open
-file handles.  This happens automatically at the objects 
-destruction.
-
-## handles
-
-    $writer->handles;
-
-Return the count of open file handles currently in the cache.
-
-## files
-
-    $writer->files;
-
-Return the count of files currently staged for being written.
-
-## lines 
-
-    $writer->lines( "filename" );
-
-Return the count of lines staged for the given filename.
-
 # AUTHOR
 
 SymKat _<symkat@symkat.com>_ ( Blog: [http://symkat.com/](http://symkat.com/) )
