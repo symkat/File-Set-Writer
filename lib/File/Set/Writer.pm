@@ -93,11 +93,15 @@ sub print {
     return $self;
 }
 
+# Write $self->expire_files_batch_size amount of files to disk,
+# in the order of files with the most lines of content.  This
+# is used when ->_files >= ->max_files in ->print.
+
 sub _write_pending_files {
     my ( $self ) = @_;
             
     my @files = sort { 
-        scalar @{$self->{queue}->{$a} || []} <=> scalar @{$self->{queue}->{$b} || []}
+        scalar @{$self->{queue}->{$b} || []} <=> scalar @{$self->{queue}->{$a} || []}
     } keys %{$self->{queue}};
 
     foreach my $i ( 0 .. $self->expire_files_batch_size ) {
@@ -105,18 +109,9 @@ sub _write_pending_files {
     }
 }
 
-sub _close_pending_filehandles {
-    my ( $self )  = @_;
-
-    my @files = sort { 
-        $self->{fcache}->{$a}->{stamp} <=> $self->{fcache}->{$b}->{stamp}
-    } keys %{$self->{fcache}};
-    
-    foreach my $i ( 0 .. $self->expire_handles_batch_size ) {
-        last unless $files[$i];
-        delete $self->{fcache}->{$files[$i]};
-    }
-}
+# Given the name of a file with queued lines, write the lines to the
+# file handle with $self->_write(), joining the lines together with
+# $self->line_join.
 
 sub _write_file {
     my ( $self, $file ) = @_;
@@ -131,11 +126,27 @@ sub _write_file {
     delete $self->{queue}->{$file};
 }
 
+
+# Given a filename and a message, write the message to the file.
+#
+# This function implements a Least Recently Used (LRU) algorithm to cache file 
+# handles for repeated use.  
+# $self->max_handles is the limit of open file descriptors at any given time,
+# while $self->expires_handles_batch_size handles will be closed when max_handles
+# has been reached.
+
 sub _write {
     my ( $self, $file, @contents ) = @_;
         
     if ( $self->_handles >= $self->max_handles ) {
-        $self->_close_pending_filehandles();
+        my @files = sort { 
+            $self->{fcache}->{$a}->{stamp} <=> $self->{fcache}->{$b}->{stamp}
+        } keys %{$self->{fcache}};
+        
+        foreach my $i ( 0 .. $self->expire_handles_batch_size ) {
+            last unless $files[$i];
+            delete $self->{fcache}->{$files[$i]};
+        }
     }
 
     if ( ! exists $self->{fcache}->{$file} ) {
