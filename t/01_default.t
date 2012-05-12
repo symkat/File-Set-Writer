@@ -1,6 +1,8 @@
 #!/usr/bin/perl
 use warnings;
 use strict;
+# Disable extra testing for deficient development environments
+BEGIN { $ENV{PERL_STRICTURES_EXTRA} = 0; }
 use File::Set::Writer;
 use Test::More;
 

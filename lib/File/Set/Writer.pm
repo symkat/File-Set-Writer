@@ -23,11 +23,15 @@ has expire_handles_batch_size => ( is => 'rw', isa => PositiveInt );
 # to manage the values.
 
 around expire_files_batch_size => sub {
-    $_[0]->(@_[1..$#_]) || int $_[1]->max_files/5
+    my ( $orig, $self ) = ( shift, shift );
+
+    return $self->$orig( @_ ) || int( $self->max_files / 5 );
 };
 
 around expire_handles_batch_size => sub {
-    $_[0]->(@_[1..$#_]) || int $_[1]->max_handles/5
+    my ( $orig, $self ) = ( shift, shift );
+
+    return $self->$orig( @_ ) || int( $self->max_handles / 5 );
 };
 
 sub print {
@@ -35,7 +39,7 @@ sub print {
     
     push @{$self->{queue}->{$file}}, @lines;
 
-    $self->_write_file( $file )
+    $self->_write_files( $file )
         if @{$self->{queue}->{$file}} >= $self->max_lines;
 
     $self->_write_pending_files 
@@ -55,26 +59,26 @@ sub _write_pending_files {
         scalar @{$self->{queue}->{$b} || []} <=> scalar @{$self->{queue}->{$a} || []}
     } keys %{$self->{queue}};
 
-    foreach my $i ( 0 .. $self->expire_files_batch_size ) {
-        $self->_write_file( $files[$i] ) if $files[$i];
-    }
+    $self->_write_files( splice @files, 0, $self->expire_files_batch_size );
 }
 
-# Given the name of a file with queued lines, write the lines to the
+# Given names of files with queued lines, write the lines to the
 # file handle with $self->_write(), joining the lines together with
 # $self->line_join.
 
-sub _write_file {
-    my ( $self, $file ) = @_;
+sub _write_files {
+    my ( $self, @files ) = @_;
 
-    die "Error _write_file called with invalid argument \"$file\""
-        unless defined $file and exists $self->{queue}->{$file};
+    foreach my $file ( @files ) {
+        die "Error _write_files called with invalid argument \"$file\""
+            unless defined $file and exists $self->{queue}->{$file};
 
-    $self->_write( 
-        $file, 
-        join( $self->line_join, @{$self->{queue}->{$file}} ) . $self->line_join
-    );
-    delete $self->{queue}->{$file};
+        $self->_write( 
+            $file, 
+            join( $self->line_join, @{$self->{queue}->{$file}}, '' )
+        );
+        delete $self->{queue}->{$file};
+    }
 }
 
 
@@ -123,12 +127,8 @@ sub _write {
 
 sub _sync {
     my ( $self ) = @_;
-    
-    foreach my $file ( keys %{$self->{queue}} ) {
-        $self->_write_file( $file );
-    }
 
-    return $self;
+    $self->_write_files( keys %{$self->{queue}} );
 }
 
 # Return the count of open file handles currently in the cache.
