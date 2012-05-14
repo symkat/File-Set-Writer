@@ -302,7 +302,7 @@ SymKat I<E<lt>symkat@symkat.comE<gt>> ( Blog: L<http://symkat.com/> )
 
 =head2 CONTRIBUTORS
 
-over 4
+=over 4
 
 =item * Matt S. Trout (mst) I<E<lt>mst@shadowcat.co.ukE<gt>>
 
