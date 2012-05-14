@@ -127,6 +127,10 @@ SymKat _<symkat@symkat.com>_ ( Blog: [http://symkat.com/](http://symkat.com/) )
 
 ## CONTRIBUTORS
 
+over 4
+
+- Matt S. Trout (mst) _<mst@shadowcat.co.uk>_
+
 # COPYRIGHT
 
 Copyright (c) 2012 the File::Set::Writer ["AUTHOR"](#AUTHOR) and 

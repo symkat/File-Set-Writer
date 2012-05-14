@@ -4,6 +4,9 @@ use Moo;
 use MooX::Types::MooseLike::Base qw( Str );
 use MooX::Types::MooseLike::Numeric qw( PositiveInt );
 
+our $VERSION = '0.000001'; # 0.0.1
+$VERSION = eval $VERSION;
+
 has max_lines => ( is => 'rw', default => sub { 500 }, isa => PositiveInt );
 
 has max_files => ( is => 'rw', default => sub { 100 }, isa => PositiveInt );
@@ -298,6 +301,12 @@ Data will be written to disk in the following situations:
 SymKat I<E<lt>symkat@symkat.comE<gt>> ( Blog: L<http://symkat.com/> )
 
 =head2 CONTRIBUTORS
+
+over 4
+
+=item * Matt S. Trout (mst) I<E<lt>mst@shadowcat.co.ukE<gt>>
+
+=back
 
 =head1 COPYRIGHT
 
