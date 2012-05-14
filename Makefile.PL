@@ -1,7 +1,7 @@
 use inc::Module::Install;
 
 name            'File-Set-Writer';
-all_from        'lib/File/Set/Writer.pm'
+all_from        'lib/File/Set/Writer.pm';
 license         'perl';
 
 # Run-Time Requirements
