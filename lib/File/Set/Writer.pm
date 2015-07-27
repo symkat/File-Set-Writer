@@ -4,7 +4,7 @@ use Moo;
 use MooX::Types::MooseLike::Base qw( Str );
 use MooX::Types::MooseLike::Numeric qw( PositiveInt );
 
-our $VERSION = '0.000001'; # 0.0.1
+our $VERSION = '0.000002'; # 0.0.2
 $VERSION = eval $VERSION;
 
 has max_lines => ( is => 'rw', default => sub { 500 }, isa => PositiveInt );
@@ -156,7 +156,9 @@ sub _lines {
 
 # Push our buffered arrays into the file handles before
 # we close the file handles.
-sub DESTROY { shift->_sync; }
+sub DEMOLISH { 
+    shift->_sync; 
+}
 
 1;
 
